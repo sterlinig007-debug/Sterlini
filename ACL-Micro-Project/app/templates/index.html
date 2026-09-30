@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ACL Micro Project Simulator</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Script-Controlled ACL</h1>
+    <p>Restrict record access based on field value</p>
+  </div>
+  <span class="badge">ServiceNow Lab Simulator</span>
+</header>
+<main>
+  <section class="card">
+    <h2>Impersonate / Switch User</h2>
+    <form method="post" action="/switch-user" class="switch">
+      <select name="user_id">
+        {% for u in users %}
+        <option value="{{u.user_id}}" {% if u.user_id == user.user_id %}selected{% endif %}>
+          {{u.user_id}} — {{u.first_name}} {{u.last_name}}
+        </option>
+        {% endfor %}
+      </select>
+      <button>Switch User</button>
+    </form>
+    <div class="user-info">
+      <strong>{{user.first_name}} {{user.last_name}}</strong>
+      <span>Roles: {{ ", ".join(user.roles) if user.roles else "none" }}</span>
+      <span>Admin: {{ "Yes" if user.is_admin else "No" }}</span>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>ACL Permissions</h2>
+      <div class="permissions">
+        <div><b>READ</b><span>{{ "GRANTED" if read_decision.allowed else "DENIED" }}</span></div>
+        <div><b>CREATE</b><span>{{ "GRANTED" if can_create else "DENIED" }}</span></div>
+        <div><b>WRITE</b><span>{{ "GRANTED" if can_write else "DENIED" }}</span></div>
+        <div><b>DELETE</b><span>{{ "GRANTED" if can_delete else "DENIED" }}</span></div>
+      </div>
+      <p class="hint">{{ read_decision.reason }}</p>
+    </div>
+
+    <div class="card">
+      <h2>Rule Summary</h2>
+      <ul>
+        <li><b>bb1:</b> Read ACL; EEE data condition.</li>
+        <li><b>bb2:</b> Create ACL.</li>
+        <li><b>bb3:</b> Write ACL.</li>
+        <li><b>bb4:</b> Delete ACL.</li>
+        <li><b>admin:</b> Full access.</li>
+      </ul>
+    </div>
+  </section>
+
+  {% if message %}<div class="message">{{message}}</div>{% endif %}
+
+  <section class="card">
+    <div class="section-title">
+      <h2>Institution Details</h2>
+      {% if can_create %}
+      <button onclick="openCreate()">New Record</button>
+      {% endif %}
+    </div>
+
+    {% if records %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Roll No.</th><th>Student</th><th>Faculty</th><th>Branch</th>
+          <th>Email</th><th>Phone</th><th>Description</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+        {% for r in records %}
+          <tr data-id="{{r.id}}">
+            <td>{{r.student_roll_number}}</td><td>{{r.student_name}}</td>
+            <td>{{r.faculty_name}}</td><td>{{r.branch}}</td><td>{{r.email}}</td>
+            <td>{{r.phone_number}}</td><td>{{r.description}}</td>
+            <td>
+              {% if can_write %}<button class="small" onclick='openEdit({{r|tojson}})'>Edit</button>{% endif %}
+              {% if can_delete %}<button class="small danger" onclick="deleteRecord({{r.id}})">Delete</button>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="empty">No records to display for this user.</div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>ACL Explanation</h2>
+    <div class="explain-row">
+      <select id="operation">
+        <option value="read">Read</option><option value="create">Create</option>
+        <option value="write">Write</option><option value="delete">Delete</option>
+      </select>
+      <select id="branch"><option value="">No branch</option><option>EEE</option><option>ECE</option><option>CSE</option></select>
+      <button onclick="explainAccess()">Explain Decision</button>
+    </div>
+    <pre id="explanation">Select an operation and click Explain Decision.</pre>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <h2 id="modal-title">New Record</h2>
+    <form id="record-form">
+      <input id="record-id" type="hidden">
+      <label>Student Name<input id="student_name" required></label>
+      <label>Faculty Name<input id="faculty_name" required></label>
+      <label>Branch<select id="branch_form"><option>ECE</option><option>EEE</option><option>CSE</option></select></label>
+      <label>Email<input id="email" type="email" required></label>
+      <label>Phone Number<input id="phone_number" required></label>
+      <label>Description<textarea id="description"></textarea></label>
+      <div class="actions"><button type="submit">Save</button><button type="button" onclick="closeModal()">Cancel</button></div>
+    </form>
+  </div>
+</div>
+<script src="{{ url_for('static', path='app.js') }}"></script>
+</body>
+</html>
